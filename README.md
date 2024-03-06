@@ -10,7 +10,7 @@ In this project, I aimed to create a Diffusion model with Cifar10 dataset for Cr
 ## Model:
 - Diffusion modeling essentially consists of two main stages. The first stage is the Diffusion stage, where we add noise to the image at regular intervals (using a cosine distribution), gradually corrupting the image until it becomes entirely noise. The second stage involves using a model (such as U-net) to learn from these noises and attempt to reconstruct the original image..
 
-#### Diffusion Stage (AE) :
+#### Diffusion Stage :
 - (All mathematical names mentioned here are derived from the formulas in the article).
 - Firstly, we create a "beta" tensor with 1000 steps at equal intervals.
 -  Then, we create an "alpha" tensor using the formula (alpha=1-beta). These tensors will help us generate noises with a normal distribution.
