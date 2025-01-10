@@ -1,57 +1,64 @@
 import torch
+import tqdm
 
-class Diffusion():
-    def __init__(self,batch_size,beta_start=0.0001,beta_end=0.02,n_steps=1000,img_size=64,devices="cuda") :
-        super(Diffusion,self).__init__()
 
+class Diffussion():
+    def __init__(self,beta_start,beta_end,n_timesteps,img_size,devices:None):
+        
+        self.n_timesteps=n_timesteps
         self.img_size=img_size
         self.devices=devices
-        self.n_steps=n_steps
-        self.batch_size=batch_size
         
-        self.beta=torch.linspace(beta_start,beta_end,n_steps).to(devices) # eşit aralıklarla 1000 boyutlu beta tensoru olusturma        
+        # For the formula to aplly noising and denoising process
+        self.beta=torch.linspace(beta_start,beta_end,n_timesteps).to(self.devices)
+        self.alpha=1-self.beta
+        self.alpha_hat=torch.cumprod(self.alpha,dim=0)
         
-        self.alpha=1-self.beta # formulden geliyor 
+    def Noising_to_Image(self,x,t):
         
-        self.alpha_hat=torch.cumprod(self.alpha,0).to(devices) # kümülatif çarpım yani kendinden onceki degerlerle çarpımı ex: (a2=a0*a1*a2), (a3=a0*a1*a2*a3), (a4=a3*a2*a1*a0)
+        sqrt_alpha_hat=torch.sqrt(self.alpha_hat[t])[:,None,None,None] # Boyutlandırma
+        sqrt_one_minus_alpha_hat=torch.sqrt(1-self.alpha_hat[t])[:,None,None,None]
         
+        noise=torch.randn_like(x)
+        
+        noisy_img=(sqrt_alpha_hat*x)+(sqrt_one_minus_alpha_hat*noise)
+        
+        return noisy_img,noise
     
-    def apply_noise_to_img(self,x,t):
-        sqrt_alpha=torch.sqrt(self.alpha_hat[t])[:,None,None,None]             # img 4 boyutlu olacagı için 3 boyut daha ekliyoruz
-        sqrt_alpha_hat=torch.sqrt(self.alpha_hat[t])[:,None,None,None]   # img 4 boyutlu olacagı için 3 boyut daha ekliyoruz
-        
-        epsilon=torch.randn_like(x).to(self.devices) # img boyutlarında normal distrubution olusturuyoruz
-        
-        return sqrt_alpha*x+sqrt_alpha_hat*epsilon,epsilon  # formule gore noise'i img'a her (t) adımda  ekliyoruz
+    def Random_Timesteps(self,batch_size): ### ANLAMADIM
+        return torch.randint(1,self.n_timesteps,(batch_size,)).to(self.devices)
     
-    def create_timestep(self):
-        return torch.randint(1,self.n_steps,size=(self.batch_size,)).to(self.devices)
+    
+    def Denoising(self,model:None,batch_size:None,labels:None): # Test the model with random noisy img
+        prog_bar=tqdm.tqdm(range(self.n_timesteps),"Prediction Image Step")
+        model.eval()
+        x=torch.randn(batch_size,3,self.img_size,self.img_size).to(self.devices)
         
-    # test için sample olusturup egitiyoruz
-    def sampling(self,model,labels): 
-        
-        x=torch.randn((self.batch_size,3,self.img_size,self.img_size)).to(self.devices) # random img noise olusturduk
-        with torch.no_grad():
-            for i in reversed(range(0,self.n_steps)): # adımlarda sondan başa dogru gidilecegi için reverse alıyoruz
-                
-                t=torch.ones((self.batch_size),dtype=torch.int)*i # i.adımda batch_size kadar time olusturuyoruz
-                self.t=t
-                beta=self.beta[t][:,None,None,None]
-                alpha=self.alpha[t][:,None,None,None]
-                alpha_hat=self.alpha_hat[t][:,None,None,None]
-                
-                predicted_noise=model(x,t,labels) # model ile resmin içerisindeki noiseyi tahmin etmemiz gerekiyor
-                
-                # random noise olusturuyoruz
-                if i==0:
-                    noise=torch.zeros_like(x).to(self.devices)
-                else:
-                    noise=torch.randn_like(x).to(self.devices)
-                
-                # Formulu uygulayarak gürültüyü bu formul ile çıkartmaya çalısıyoruz.
-                x = 1 / torch.sqrt(alpha)* (x- ((1-alpha)) / (torch.sqrt(1-alpha_hat))*predicted_noise) + torch.sqrt(beta)*noise
-        
-        new_x=(new_x.clamp(-1,1)+1)/2
-        new_x=(new_x*255).type(torch.uint8)
+        for i in enumerate(reversed(range(1,self.n_timesteps))):
             
-        return new_x
+            T=(torch.ones(batch_size)*i).long().to(self.devices)
+    
+            predicted_noise=model(x,T,labels)
+            
+            # CFG predicted_noise. This process about, if we train conditional, after we need to predict uncoditional.
+            # We use torch lerp to aproach conditional prediction from unconditional smoothly with 3 scale factor
+            if labels!=None:
+                predicted_noise_unc=model(x,T,None)
+                predicted_noise=torch.lerp(predicted_noise_unc,predicted_noise,3) 
+            
+            beta=self.beta[T][:,None,None,None]
+            alpha=self.alpha[T][:,None,None,None]
+            alpha_hat=self.alpha_hat[T][:,None,None,None]
+            
+            noise=(torch.randn_like(x) if i>1 else torch.zeros_like(x)).to(self.devices)
+            
+            x = (1/alpha_hat) * (x-((1-alpha)/torch.sqrt(1-alpha_hat))*predicted_noise) +(torch.sqrt(beta)*noise)
+            prog_bar.update(1)
+        
+        prog_bar.close()
+        
+        model.train()
+        
+        x=(x.clamp(-1,1) + 1) / 2
+        x=(x*255).type(torch.uint8)
+        return x

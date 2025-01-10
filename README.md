@@ -15,7 +15,7 @@ In this project, I aimed to create a Diffusion model with Cifar10 dataset for Cr
 - Firstly, we create a "beta" tensor with 1000 steps at equal intervals.
 -  Then, we create an "alpha" tensor using the formula (alpha=1-beta). These tensors will help us generate noises with a normal distribution.
 -  Next, by applying cumulative product to the alpha tensor, we create the "alpha hat" tensor. This ensures that all noise steps are contained within a single tensor because the noise will increase at each step within the tensor.
--  Using the formula (sqrt(alpha)*x+sqrt(alpha_hat)*epsilon) where epsilon represents normal distribution random data, we apply noise to x at each step. Since the noise increases at each step, the image will become more corrupted with each step.
+-  Using the formula (sqrt(alpha)*x+sqrt(alpha_hat)*epsilon) where epsilon represents normal distribution random data like "torch.randn", we apply noise to x at each step. Since the noise increases at each step, the image will become more corrupted with each step.
 - Using the model, we will attempt to gradually reach the real images by predicting the noise within the image at each step, using the formula (new_x = 1 / torch.sqrt(alpha)* (x- ((1-alpha)) / (torch.sqrt(1-alpha_hat))*predicted_noise) + torch.sqrt(beta)*noise). 
 - Essentially, we are trying to predict the noise within the image rather than the image itself.
 
@@ -28,5 +28,5 @@ In this project, I aimed to create a Diffusion model with Cifar10 dataset for Cr
 
 ## Train:
 - During training, we apply these steps individually for each batch of images, and eventually generate images through sampling.
-- We teach the model to remove noise from the image, essentially teaching it to generate images from noise, because at the final stage where we reach the maximum noise level, there is no trace of the original image left.
+- We teach the model to remove noise from the image, essentially teaching it to generate images from noise because at the final stage where we reach the maximum noise level, there is no trace of the original image left.
 - We use the 'Adam' optimizer and Mean Square Error Loss function during training.

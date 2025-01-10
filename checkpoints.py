@@ -1,21 +1,34 @@
 import torch
 
-def Save_Checkpoints(optimizer,model,epoch:int,save_path:str):
-    callbacks={"Epoch":epoch,
-               "Optim_vqgan_State":model.state_dict(),
-               "Model_vqgan_State":optimizer.state_dict()
-               }
+
+def Save_Checkpoints(epoch,optimizer,model,save_path:str):
+    print("Checkpoint is saving...\n")
+    checkpoint={"Epoch":epoch,
+                "Optimizer_state":optimizer.state_dict(),
+                "Model_state":model.state_dict()}
     
-    torch.save(callbacks,f=save_path)
+    torch.save(checkpoint,save_path)
     
-    print("Checkpoints are saved...")
+    
+
+def Load_Checkpoint(Load:bool,save_path,optimizer,Model):
+    
+    if Load==True:
+        checkpoint=torch.load(save_path)
+    
+        initial_epoch=checkpoint["epoch"]
+        optimizer.load_state_dict(checkpoint["Optimizer_state"])
+        Model.load_state_dict(checkpoint["Model_state"])
+
+        print(f"Checkpoint was loaded,training is starting {initial_epoch+1}.epoch\n")
+        
+    else: 
+        initial_epoch=1
+        print("Checkpoint was not loaded,training is starting from scratch\n")
+        
+    return initial_epoch
 
 
 
 
-def Load_Checkpoints(checkpoint,optimizer,model):
     
-    optimizer.load_state_dict(checkpoint["Model_vqgan_State"])
-    model.load_state_dict(checkpoint["Model_disc_State"])
-    
-    return checkpoint["Epoch"]

@@ -1,63 +1,51 @@
+import checkpoints,config,dataset,diffussion,model,train,prediction
 import torch
-import checkpoints
-import dataset
-import training
-import config
-import warnings
-import U_Net,Diffussion
 from torch.utils.tensorboard import SummaryWriter
+import warnings
 warnings.filterwarnings("ignore")
 
 
-# Control Cuda
-devices = ("cuda" if torch.cuda.is_available() else "cpu")
-
+# Devices
+devices=("cuda" if torch.cuda.is_available() else "cpu")
 
 # Tensorboard
-Tensorboard=SummaryWriter(config.TENSORBOARD_PATH)
+Tensorboard=SummaryWriter(config.TENSORBOARD_DIR,"Diffussion Model Tensorboard")
 
-# Create Dataset
-cifar_data = dataset.DATASET(img_size=config.IMG_SIZE)
-cifar_dataloader = dataset.Create_Dataloader(dataset=cifar_data, batch_size=config.BATCH_SIZE)
+# Dataset
+train_dataset,test_dataset=dataset.Loading_Dataset(config.DATASET_DIR)
+# Dataloader
+train_dataloader,test_dataloader=dataset.dataloader(train_dataset,test_dataset,config.BATCH_SIZE)
 
+# Some Variables
+CHANNEL_SIZE=train_dataset[0][0].shape[0]
+NUM_CLASSES=len(train_dataset.classes)
+IMG_SIZE=train_dataset[0][0].shape[1]
 
-# Models
-diffusion=Diffussion.Diffusion(batch_size=config.BATCH_SIZE,img_size=config.IMG_SIZE,devices=devices)
-model=U_Net.U_Net(channels_size=config.CHANNEL_IMG,batch_size=config.BATCH_SIZE,embedding_dim=config.EMBEDDING_DIM,label_size=config.LABEL_SIZE,devices=devices).to(devices)
+# Model
+Model=model.Unet(CHANNEL_SIZE,devices,NUM_CLASSES).to(devices)
+Diffussion_Model=diffussion.Diffussion(config.BETA_START,config.BETA_END,config.N_TIMESTEPS,IMG_SIZE,devices)
 
+# Optimizer and Loss
+optimizer=torch.optim.Adam(params=Model.parameters(),lr=config.LEARNING_RATE)
+loss_fn=torch.nn.MSELoss()
 
-# Optimizers
-optimizer=torch.optim.Adam(params=model.parameters())
+# Load Checkpoints
+initial_epoch=checkpoints.Load_Checkpoint(config.LOAD_CHECKPOINT,save_path=config.CHECKPOINT_DIRD,optimizer=optimizer,Model=Model)
 
+# Training 
+train.Training(EPOCH=config.EPOCH,Train_Dataloader=train_dataloader,Model=Model,Diffussion_Model=Diffussion_Model,optimizer=optimizer,
+               loss_fn=loss_fn,Save_Checkpoint_fn=checkpoints.Save_Checkpoints,Checkpoints_dir=config.CHECKPOINT_DIRD,devices=devices,
+               STARTING_EPOCH=initial_epoch,Tensorboard=Tensorboard)
 
-# Loss
-loss_fn = torch.nn.MSELoss()
-
-
-# Load Checkpoınt if you want
-if config.LOAD_CHECKPOINTS == True:
-    checkpoint = torch.load(f=config.CALLBACK_PATH)
-    resume_epoch = checkpoints.Load_Checkpoints(checkpoint=checkpoint,
-                                                optimizer=optimizer,
-                                                model=model)
-
-    print(f"Training is going to start from {resume_epoch}.epoch... ")
-    
-else:
-    resume_epoch = 0
-    print("Training is going to start from scratch...")
-
+# Prediction
+prediction.Prediction(config.PREDICTION,label=config.PRED_LABEL,class_to_idx=train_dataset.class_to_idx,Model=Model,
+                      Diffussion_Model=Diffussion_Model,devices=devices)
 
 
-# Training
-training.Training(EPOCHS=config.EPOCHS,
-                  resume_epoch=resume_epoch,
-                  Img_dataloader=cifar_dataloader,
-                  Tensorboard=Tensorboard,
-                  model=model,
-                  optimizer=optimizer,
-                  diffuser=diffusion,
-                  loss_fn=loss_fn,
-                  Save_Checkpoints=checkpoints.Save_Checkpoints,
-                  CALLBACK_PATH=config.CALLBACK_PATH,
-                  devices=devices)
+
+
+
+
+
+
+

@@ -1,32 +1,37 @@
-from torchvision import transforms,datasets
-from torch.utils.data import DataLoader,Dataset
+from torchvision.datasets import CIFAR10
+from torch.utils.data import Dataset,DataLoader
+from torchvision.transforms import transforms
 
 
-
-class DATASET(Dataset):
-    def __init__(self,img_size):
-        super(DATASET,self).__init__()
-        
-        transform=transforms.Compose([transforms.ToTensor(),
-                    transforms.Normalize((0.5,),(0.5,)),
-                    transforms.Resize((img_size,img_size))
-                    ])
-        
-        self.data=datasets.CIFAR10(root="CIFAR",
-                 train=True,
-                 download=True,
-                 transform=transform)
-        
-    def __len__(self):
-        
-        return len(self.data)
+def Loading_Dataset(data_dir:str):
     
-    def __getitem__(self, index):
-        
-        return self.data[index]
+    train=CIFAR10(root=data_dir,
+                    train=True,
+                    transform=transforms.Compose([transforms.ToTensor(),
+                                                    transforms.Normalize((0.5,),(0.5,)),
+                                                    transforms.Resize((64,64))]),
+                    download=True)
+
+    test=CIFAR10(root=data_dir,
+                 train=False,
+                 transform=transforms.Compose([transforms.ToTensor(),
+                                                transforms.Normalize((0.5,),(0.5,)),
+                                                transforms.Resize((64,64))]),
+                 download=True)
 
 
+    return train,test
 
-def Create_Dataloader(dataset,batch_size):
+
+def dataloader(train_dataset,test_dataset,batch_size):
     
-    return DataLoader(dataset=dataset,batch_size=batch_size,shuffle=True,drop_last=True)
+    train=DataLoader(train_dataset,batch_size=batch_size,shuffle=True,drop_last=True)
+    test=DataLoader(test_dataset,batch_size=batch_size,shuffle=False,drop_last=True)
+    
+    
+    return train,test
+    
+    
+
+
+

@@ -1,15 +1,24 @@
-BATCH_SIZE=128
-F_DIM=100
-EPOCHS=20
-LEARNING_RATE=2e-4
-LOAD_CHECKPOINTS=False
-TENSORBOARD_PATH="Tensorboard"
-CALLBACK_PATH="stable_diffussion_cifar.pth.tar"
-CHANNEL_IMG=3
-IMG_SIZE=64
-NUM_EMBEDDING=256
-EMBEDDING_DIM=256
-D_MODEL=512
-D_MODEL_DISC=64
-Nx=6
-LABEL_SIZE=10
+# For the train
+BATCH_SIZE=100
+EPOCH=2
+LEARNING_RATE=3e-4
+
+# Paths
+TENSORBOARD_DIR="Tensorboard"
+CHECKPOINT_DIRD="diffusion_checkpoint.pth.tar"
+DATASET_DIR="CIFAR"
+
+# For the Difussion
+BETA_START=1e-4
+BETA_END=0.02
+N_TIMESTEPS=1000
+
+# For the checkpoint loading
+LOAD_CHECKPOINT=False
+
+# For prediction
+PREDICTION=True
+PRED_LABEL="ship"
+
+
+
