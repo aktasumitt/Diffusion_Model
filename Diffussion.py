@@ -34,7 +34,7 @@ class Diffussion():
         model.eval()
         x=torch.randn(batch_size,3,self.img_size,self.img_size).to(self.devices)
         
-        for i in enumerate(reversed(range(1,self.n_timesteps))):
+        for i in reversed(range(1,self.n_timesteps)):
             
             T=(torch.ones(batch_size)*i).long().to(self.devices)
     

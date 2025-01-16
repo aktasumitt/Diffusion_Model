@@ -24,7 +24,7 @@ def Training(EPOCH,Train_Dataloader,Model,Diffussion_Model,optimizer,loss_fn,Sav
             if CFG_SCALE<10:
                 labels=None
             t=Diffussion_Model.Random_Timesteps(img_train.shape[0]) # Create Random Tİmesteps
-            noisy_img,noise=Diffussion_Model.Noising_to_Image(img_train,t,label_train) # image noising Step
+            noisy_img,noise=Diffussion_Model.Noising_to_Image(img_train,t) # image noising Step
             
             pred_noise=Model(noisy_img,t,label_train) # Pred noise with model VAE
             loss_train=loss_fn(pred_noise,noise) # Loss MSE between pred_noise and real noise
